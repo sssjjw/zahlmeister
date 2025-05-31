@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZahlMeister - Deutsch Zahlen & Euro Hören</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap');
+
+    body {
+      font-family: 'Orbitron', sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #fff;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1e90ff;
+      width: 100%;
+      padding: 1rem;
+      text-align: center;
+      font-size: 2rem;
+      text-shadow: 2px 2px 4px #000000;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+    }
+
+    main {
+      padding: 2rem;
+      max-width: 600px;
+      width: 90%;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+      margin-top: 2rem;
+    }
+
+    .controls, .feedback {
+      margin: 1rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    label {
+      font-weight: bold;
+      font-size: 1rem;
+    }
+
+    select, input[type="text"], button {
+      padding: 0.75rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.8);
+      color: #000;
+      transition: all 0.3s ease-in-out;
+    }
+
+    button {
+      background: #1e90ff;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #63b3ed;
+      transform: scale(1.05);
+    }
+
+    .feedback {
+      font-size: 1.5rem;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .warning {
+      color: yellow;
+      text-align: center;
+      margin-top: 1rem;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    ZahlMeister - Deutsch Zahlen & Euro Hören
+  </header>
+  <main>
+    <div class="controls">
+      <label for="mode">Wähle Modus:</label>
+      <select id="mode" onchange="resetUI()">
+        <option value="number">Zahlen hören</option>
+        <option value="euro">Euro hören</option>
+      </select>
+
+      <label for="difficulty">Wähle Schwierigkeitsgrad (nur Zahlenmodus):</label>
+      <select id="difficulty">
+        <option value="easy">A1 (1-20)</option>
+        <option value="medium">A2-B1 (21-999)</option>
+        <option value="hard">B2-C1 (vierstellige Zahlen)</option>
+      </select>
+
+      <label for="speed">Abspielgeschwindigkeit:</label>
+      <select id="speed">
+        <option value="slow">Langsam</option>
+        <option value="normal" selected>Normal</option>
+        <option value="fast">Schnell</option>
+      </select>
+
+      <button onclick="playNumber()">🎧 Zahl Abspielen</button>
+      <button onclick="replayNumber()">🔁 Wiederholen</button>
+
+      <input type="text" id="answer" placeholder="Gib deine Antwort ein..." oninput="autoCheckAnswer()" />
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+    <p class="warning">
+      ⚠️ Hinweis: Wenn du die Zahl oder den Euro-Betrag auf Deutsch nicht hörst, stelle sicher, dass dein Gerät eine deutsche Stimme installiert und aktiviert hat.
+    </p>
+  </main>
+
+  <script>
+    let currentNumber = 0;
+    let currentUtterance = null;
+
+    function resetUI() {
+      const mode = document.getElementById('mode').value;
+      const diff = document.getElementById('difficulty');
+      diff.disabled = (mode === 'euro');
+      document.getElementById('feedback').textContent = "";
+      document.getElementById('answer').value = "";
+    }
+
+    function generateNumber(level) {
+      if (level === 'easy') return Math.floor(Math.random() * 20) + 1;
+      if (level === 'medium') return Math.floor(Math.random() * 979) + 21;
+      if (level === 'hard') return Math.floor(Math.random() * 9000) + 1000;
+    }
+
+    function generateEuroAmount() {
+      return (Math.random() * 99.99 + 0.01).toFixed(2);
+    }
+
+    function getGermanVoice() {
+      const voices = speechSynthesis.getVoices();
+      return voices.find(v => v.lang.startsWith('de')) || voices[0];
+    }
+
+    function playNumber() {
+      const mode = document.getElementById('mode').value;
+      const speed = document.getElementById('speed').value;
+      let text = "";
+
+      if (mode === 'number') {
+        const level = document.getElementById('difficulty').value;
+        currentNumber = generateNumber(level);
+        text = currentNumber.toString();
+      } else {
+        currentNumber = generateEuroAmount();
+        text = euroToGerman(currentNumber);
+      }
+
+      currentUtterance = new SpeechSynthesisUtterance(text);
+      currentUtterance.lang = 'de-DE';
+      currentUtterance.voice = getGermanVoice();
+      currentUtterance.rate = speed === 'slow' ? 0.6 : speed === 'fast' ? 1.4 : 1.0;
+      speechSynthesis.speak(currentUtterance);
+
+      document.getElementById('feedback').textContent = "";
+      document.getElementById('answer').value = "";
+    }
+
+    function euroToGerman(amount) {
+      const [euros, cents] = amount.split('.').map(n => parseInt(n));
+      let euroText = euros === 1 ? 'ein Euro' : `${euros} Euro`;
+      let centText = cents === 1 ? 'ein Cent' : `${cents} Cent`;
+      return cents > 0 ? `${euroText} und ${centText}` : euroText;
+    }
+
+    function replayNumber() {
+      if (currentUtterance) {
+        speechSynthesis.speak(currentUtterance);
+      }
+    }
+
+    function autoCheckAnswer() {
+      const mode = document.getElementById('mode').value;
+      const input = document.getElementById('answer').value.trim();
+      const feedback = document.getElementById('feedback');
+
+      if (mode === 'number') {
+        const answer = parseInt(input);
+        if (answer === parseInt(currentNumber)) {
+          feedback.textContent = `✅ Richtig! Die Zahl war ${currentNumber}.`;
+          feedback.style.color = '#00ff7f';
+          setTimeout(playNumber, 1200);
+        }
+      } else {
+        const num = parseFloat(input.replace(',', '.'));
+        if (!isNaN(num) && Math.abs(num - parseFloat(currentNumber)) < 0.01) {
+          feedback.textContent = `✅ Richtig! Der Betrag war ${currentNumber} €.`;
+          feedback.style.color = '#00ff7f';
+          setTimeout(playNumber, 1500);
+        }
+      }
+    }
+
+    window.speechSynthesis.onvoiceschanged = () => {};
+    window.onload = resetUI;
+  </script>
+</body>
+</html>
